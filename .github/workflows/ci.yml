@@ -38,7 +38,10 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2-
-      # devkit.toml's url is on a private network; devkitw falls back to its GitHub mirror.
+      # devkit.toml's url is on a private network; devkitw falls back to its GitHub mirror. A step
+      # of its own, so a failed fetch skips the gates below instead of failing each of them.
+      - name: Fetch devkit
+        run: ./devkitw path
       # -k runs every repository gate and reports each failure; the later steps still run after a
       # failed gate (the job stays red), so one push shows every problem. They do not run after a
       # failed setup step, which leaves this step skipped.

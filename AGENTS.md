@@ -7,9 +7,10 @@ the product does not.
 
 Read `docs/decisions.md` before proposing a design: it records what is
 settled and which alternatives were rejected. Record a new load-bearing
-decision there, in the same entry format (`make lint` checks the `## ADR-N`
-heading, exactly one `**Status:**` (Accepted or Proposed), and that
-`**Premise:**` and `**Guard:**` come as a pair, not the section layout).
+decision there, in the same entry format. `make lint` checks the `## ADR-N`
+heading, exactly one `**Status:**` of Accepted or Proposed, and that a
+`**Premise:**` has a `**Guard:**` naming how it is watched; it does not check
+the section layout.
 
 ## Modules
 
@@ -28,8 +29,8 @@ deliberate violation (`MutinyViaVarFixture`). Do not weaken the rule to make a
 test pass; change the code.
 
 The test does not check these rules yet (#42 tracks widening the fence): no
-reactive return types and no `@NonBlocking`; Vert.x core only where needed,
-called from a virtual thread and awaited (ADR-10).
+reactive return types and no `@NonBlocking`; Vert.x core only where Quarkus
+REST needs it, called from a virtual thread and awaited (ADR-10).
 
 ## Gates
 
@@ -49,7 +50,7 @@ exercised. It does not mean exception paths in general are tested, nor that
 behaviour inside a library is: failure and concurrency behaviour needs
 behavioural tests of its own. See the coverage entry in `docs/decisions.md`.
 
-Devkit's JaCoCo check skips a module that has no execution data, that is, no
+devkit's JaCoCo check skips a module that has no execution data, that is, no
 tests (today `core`). Every module with production classes needs at least one
 test, or its coverage is not checked.
 
@@ -57,8 +58,7 @@ test, or its coverage is not checked.
 
 - devkit is pinned in `devkit.toml`. Never edit `devkitw`; a bump copies the
   new one in (`make lint` verifies it). The GitHub mirror (`mirror` in
-  `devkit.toml`) must carry the new signed tag before CI can fetch it, and
-  `make hooks` must be re-run.
+  `devkit.toml`) must carry the new signed tag before CI can fetch it.
 - Work lands on `main` only through a branch and a pull request.
 - A fix for a failing gate fixes the cause. Do not suppress a finding without
   a recorded reason next to the suppression.

@@ -29,7 +29,7 @@
 
   <properties>
     <!-- Placeholder to override with -Drevision= -->
-    <revision>0.1.0-SNAPSHOT</revision>
+    <revision>1.0.0-SNAPSHOT</revision>
 
     <!-- Project Settings -->
     <jacoco.check.lineMinimum>1.00</jacoco.check.lineMinimum>

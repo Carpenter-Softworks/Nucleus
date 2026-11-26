@@ -3,8 +3,8 @@
 Each entry records one decision: the context, the decision, the alternatives
 rejected and why, and the consequences. `make lint` checks each entry's
 `## ADR-N` heading, that it has exactly one `**Status:**` (Accepted or
-Proposed), and that `**Premise:**` and `**Guard:**` come as a pair; it does not
-check the section layout.
+Proposed), and that a `**Premise:**` has a `**Guard:**` naming how it is
+watched; it does not check the section layout.
 Measurements cited as "the spike" are the results of a throwaway prototype,
 posted as a
 [comment on issue #1](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321).
@@ -29,8 +29,10 @@ already exist and apply as they are, with one limit: the checksums cover
 devkit's own gate tooling at its pinned versions, not the project's dependency
 graph, and a build extension the project adds (`quarkus-maven-plugin` with
 `<extensions>true</extensions>`) runs in Maven's JVM unverified and could
-defeat even that. Virtual threads let straightforward
-blocking code scale ([ADR-10](#adr-10-the-threading-model-blocking-code-on-virtual-threads)).
+defeat even that
+([ADR-14](#adr-14-dependency-closure-not-checksum-verified-an-accepted-risk)).
+Virtual threads let straightforward blocking code scale
+([ADR-10](#adr-10-the-threading-model-blocking-code-on-virtual-threads)).
 
 Rejected:
 
@@ -60,17 +62,6 @@ Consequences: the Quarkus platform follows its latest LTS line, not the newest
 stable release, so `make check` reporting a newer release as outdated is
 expected. A deployment needs a JVM. A single static binary for tiny hardware is
 not a goal; that need would reopen this decision toward Go.
-
-Accepted risk: the dependency closure and build extensions are not pinned.
-No nucleus artifact is released yet, and pinning the full closure (for example
-project-level trusted checksums) costs upkeep on every Quarkus bump; TLS to
-Maven Central is the protection for now.
-
-**Premise:** no nucleus artifact has been released, and the project's own build
-does not run through nucleus (#36).
-**Guard:** watcher: before the first release, and before relying on this entry
-to skip pinning the dependency closure, re-check both; if either has changed,
-pin the closure.
 
 ## ADR-2: Build rather than adopt or stitch together existing tools
 
@@ -176,17 +167,13 @@ Alternatives: no other license was weighed; AGPL is the license that fits a
 network server. "Or later" over "only" is the maintainer's choice, with no
 further rationale recorded.
 
-Consequences: a sole copyright holder can relicense future versions; only past
-releases stay AGPL, so the license alone does not remove the rug-pull worry
-operators have with single-maintainer projects. What is structurally credible
+Consequences: future versions can be relicensed
+([ADR-15](#adr-15-future-versions-can-be-relicensed)); only past releases stay
+AGPL, so the license alone does not remove the rug-pull worry operators have
+with single-maintainer projects. What is structurally credible
 is the product category: a pull-through cache has almost no lock-in, because
 everything in it can be fetched again from upstream and clients reach it
 through their ordinary mirror settings.
-
-**Premise:** the project has a single copyright holder: no outside contribution
-has been accepted without an inbound licence grant (CLA or equivalent).
-**Guard:** watcher: re-check at the first outside contribution, before relying
-on the relicensing consequence above.
 
 ## ADR-5: Pull-through only
 
@@ -311,14 +298,15 @@ Context: the core mechanism is one upstream download that fills the cache
 while several clients read the growing file, each at its own pace, and the
 download continues if the client that started it disconnects.
 
-Decision: blocking code on `@RunOnVirtualThread`. No Mutiny in the project's
-own code; Quarkus still runs on Vert.x underneath. The
-fence is `ThreadingModelTest`, an ArchUnit rule on bytecode dependencies that
-fails when project code depends on `io.smallrye.mutiny` or `io.vertx.mutiny`.
+Decision: blocking code on `@RunOnVirtualThread`. No Mutiny and no reactive
+types in the project's own code, except Vert.x's core API below; Quarkus still
+runs on Vert.x underneath. The fence is `ThreadingModelTest`, an ArchUnit rule
+on bytecode dependencies that fails when project code depends on
+`io.smallrye.mutiny` or `io.vertx.mutiny`.
 It is proven by a fixture that reaches Mutiny without an import (a fully
 qualified name and inferred types). An import ban would miss both. Vert.x's
-core API is not banned: where needed, for example where Quarkus REST needs it,
-it is called from a virtual thread and awaited.
+core API is not banned: where Quarkus REST needs it, it is called from a
+virtual thread and awaited.
 
 Reason, from the measurements of
 [the spike](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321)
@@ -420,7 +408,8 @@ length (the spike answered 502 there).
 ## ADR-12: Serving cache hits, project Range code, no PathPart over HTTP/2, TLS at a reverse proxy
 
 **Status:** Accepted
-**Date:** 2026-10-24
+**Date:** 2026-10-24 (the listener reachability rule and the HTTP/2 pump left
+open: 2026-11-26)
 
 Context: Quarkus REST's plain `Path` response handles a single range, but it
 never returns 416 (an unsatisfiable range gets 200 with the full body), sends
@@ -454,7 +443,7 @@ Rejected: relying on the plain `Path` entity, for the gaps above.
 Consequences: the zero-copy finding was read from the Vert.x source, not
 observed (strace was unavailable), so it is an inference. Not yet defined, to
 be defined in #5: Range on a miss (the spike answered 200 with the full body),
-and Maven's resume with Range. Nucleus's cleartext HTTP/1.1 listener must be
+and Maven's resume with Range. The cleartext HTTP/1.1 listener of nucleus must be
 reachable only from the TLS proxy (bound to loopback or an internal network);
 trusting the proxy's forwarded headers is not enough on its own. Every
 response carries `Content-Length`
@@ -507,3 +496,52 @@ Mutation testing (#30) checks that the tests assert something. PIT 1.30.1
 worked on Java 25 in the spike, including with `@QuarkusTest`; its scores there
 were `core` 77% mutations killed (85% test strength) and one `app` test class
 39% (62%). The scores are not a gate yet.
+
+## ADR-14: Dependency closure not checksum-verified, an accepted risk
+
+**Status:** Accepted
+**Date:** 2026-11-26
+
+Context: devkit's plugin checksums cover its own gate tooling at its pinned
+versions, not the project's dependency graph, and `quarkus-maven-plugin` runs
+as a build extension in Maven's JVM without verification
+([ADR-1](#adr-1-java-25-on-the-jvm-with-quarkus)).
+
+Decision: the dependency closure and build extensions are pinned by version
+(the Quarkus BOM) but not checksum-verified. TLS to Maven Central is the
+protection.
+
+Reason: no nucleus artifact is released yet, and verifying the full closure,
+for example with project-level trusted checksums, costs upkeep on every
+Quarkus bump.
+
+Rejected: project-level trusted checksums now, for that upkeep before anything
+ships.
+
+Consequences: dogfooding (#36) replaces the stated protection, TLS to Maven
+Central, with nucleus's own upstream fetch, so it reopens this entry, as does
+the first release.
+
+**Premise:** no nucleus artifact has been released, and the project's own build
+does not run through nucleus (#36).
+**Guard:** watcher: before the first release and before #36 lands, re-check
+both; if either has changed, verify the closure.
+
+## ADR-15: Future versions can be relicensed
+
+**Status:** Accepted
+**Date:** 2026-11-26
+
+Context: [ADR-4](#adr-4-agpl-30-or-later)'s consequences rest on the copyright
+holder being able to relicense future versions.
+
+Decision: relicensing future versions stays possible. Past releases stay
+AGPL-3.0-or-later.
+
+Consequences: an outside contribution accepted without an inbound grant ends
+this, because its author's copyright then covers part of every later version.
+
+**Premise:** the copyright holder can relicense: every accepted outside
+contribution came with an inbound grant permitting it (a CLA or equivalent).
+**Guard:** watcher: re-check at the first outside contribution, before relying
+on this entry or on ADR-4's relicensing consequence.
