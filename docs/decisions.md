@@ -520,7 +520,9 @@ ships.
 
 Consequences: dogfooding (#36) replaces the stated protection, TLS to Maven
 Central, with nucleus's own upstream fetch, so it reopens this entry, as does
-the first release.
+the first release. The dependency-graph workflow runs this closure with a
+`contents: write` token, outside `mvn_checked.sh`; verifying the closure has to
+cover that run too.
 
 **Premise:** no nucleus artifact has been released, and the project's own build
 does not run through nucleus (#36).
