@@ -1,7 +1,10 @@
 # Decisions
 
 Each entry records one decision: the context, the decision, the alternatives
-rejected and why, and the consequences. `make lint` checks the entry format.
+rejected and why, and the consequences. `make lint` checks each entry's
+`## ADR-N` heading, that it has exactly one `**Status:**` (Accepted or
+Proposed), and that `**Premise:**` and `**Guard:**` come as a pair; it does not
+check the section layout.
 Measurements cited as "the spike" are the results of a throwaway prototype,
 posted as a
 [comment on issue #1](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321).
@@ -22,7 +25,11 @@ language is only as good as the gates that exist for it.
 Decision: Java 25 on the JVM, with Quarkus for HTTP, security and database
 access. devkit's Java gates (Error Prone with NullAway, SpotBugs, PMD,
 Checkstyle, JaCoCo branch coverage, a license allowlist, plugin checksums)
-already exist and apply as they are. Virtual threads let straightforward
+already exist and apply as they are, with one limit: the checksums cover
+devkit's own gate tooling at its pinned versions, not the project's dependency
+graph, and a build extension the project adds (`quarkus-maven-plugin` with
+`<extensions>true</extensions>`) runs in Maven's JVM unverified and could
+defeat even that. Virtual threads let straightforward
 blocking code scale ([ADR-10](#adr-10-the-threading-model-blocking-code-on-virtual-threads)).
 
 Rejected:
@@ -32,8 +39,9 @@ Rejected:
   behaviour. A parser of attacker-controlled input is where those bugs live,
   and a test shows the presence of a bug, never its absence. Memory safety
   would depend on sanitizer builds and continuous fuzzing; the JVM gives it by
-  default, short of JNI, `Unsafe` or the foreign-function API, which a gate can
-  ban.
+  default, in the project's own code, short of JNI, `Unsafe` or the
+  foreign-function API, which a gate can ban (#43). Dependencies already ship
+  native code: `quarkus-rest` brings `brotli4j`'s native-linux-x86_64 library.
 - **Rust.** Memory safety and data-race freedom are by construction, but
   branch coverage was an unstable, nightly-only feature in its coverage tooling
   when this was decided, devkit has no Rust support, and cancelling async work
@@ -52,6 +60,17 @@ Consequences: the Quarkus platform follows its latest LTS line, not the newest
 stable release, so `make check` reporting a newer release as outdated is
 expected. A deployment needs a JVM. A single static binary for tiny hardware is
 not a goal; that need would reopen this decision toward Go.
+
+Accepted risk: the dependency closure and build extensions are not pinned.
+No nucleus artifact is released yet, and pinning the full closure (for example
+project-level trusted checksums) costs upkeep on every Quarkus bump; TLS to
+Maven Central is the protection for now.
+
+**Premise:** no nucleus artifact has been released, and the project's own build
+does not run through nucleus (#36).
+**Guard:** watcher: before the first release, and before relying on this entry
+to skip pinning the dependency closure, re-check both; if either has changed,
+pin the closure.
 
 ## ADR-2: Build rather than adopt or stitch together existing tools
 
@@ -164,6 +183,11 @@ is the product category: a pull-through cache has almost no lock-in, because
 everything in it can be fetched again from upstream and clients reach it
 through their ordinary mirror settings.
 
+**Premise:** the project has a single copyright holder: no outside contribution
+has been accepted without an inbound licence grant (CLA or equivalent).
+**Guard:** watcher: re-check at the first outside contribution, before relying
+on the relicensing consequence above.
+
 ## ADR-5: Pull-through only
 
 **Status:** Accepted
@@ -175,7 +199,7 @@ small team can host those in a general package registry such as Gitea.
 Decision: nucleus is a pull-through cache only. Hosted repositories (publish,
 upload, deploy) are out of scope, tracked as issue #38 with what would bring
 them back in scope. Full offline mirroring is a different product and is
-likewise not built.
+likewise not built (#40).
 
 Rejected: hosted repositories in the first version, which would add OCI
 chunked push, npm publish, twine upload, Maven deploy and most of the write-side
@@ -211,9 +235,12 @@ Rejected:
   endpoint able to change configuration. With a file, none can, and the web UI
   shrinks to read-only status and browsing.
 - **An embedded index (H2, SQLite, or a homegrown file-based index):** each
-  brings a cost, such as SQLite's JDBC driver shipping native code. Embedded
-  wins only if a single-container deployment matters for adoption; that is
-  recorded as out of scope, to be measured before it is reopened.
+  brings a cost, such as SQLite's JDBC driver shipping native code. The
+  baseline already ships native code through `quarkus-rest` (`brotli4j`), so
+  this reason weighs adding native code to the storage path, not keeping the
+  process free of it. Embedded wins only if a single-container deployment
+  matters for adoption; that is
+  recorded as out of scope (#39), to be measured before it is reopened.
 
 Consequences: PostgreSQL is a deployment requirement. Eviction queries are
 plain SQL. The trusted reverse proxy
@@ -268,7 +295,7 @@ Reason: protocol logic, parsing and verification are where the correctness
 risk lies, and they benefit most from fast tests without a framework. A Maven
 module cannot use what it does not depend on, so the module graph enforces the
 boundary with no extra tool, whereas inside one module only a bytecode test
-could police it. Mutation testing also runs on `core` without Quarkus.
+could police it. Mutation testing is planned to run on `core` without Quarkus (#30).
 
 Consequences: framework wiring, REST endpoints and database access live in
 `app`; `core` exposes plain interfaces to them. The threading fence in
@@ -284,17 +311,19 @@ Context: the core mechanism is one upstream download that fills the cache
 while several clients read the growing file, each at its own pace, and the
 download continues if the client that started it disconnects.
 
-Decision: blocking code on `@RunOnVirtualThread`. No Mutiny, and no reactive
-types in the project's own code; Quarkus still runs on Vert.x underneath. The
+Decision: blocking code on `@RunOnVirtualThread`. No Mutiny in the project's
+own code; Quarkus still runs on Vert.x underneath. The
 fence is `ThreadingModelTest`, an ArchUnit rule on bytecode dependencies that
 fails when project code depends on `io.smallrye.mutiny` or `io.vertx.mutiny`.
-It is proven by a fixture that reaches Mutiny through `var` without an import.
-An import ban would miss fully qualified names and types inferred through
-`var`. Vert.x's core API is not banned: where Quarkus REST needs it, it is
-called from a virtual thread and awaited.
+It is proven by a fixture that reaches Mutiny without an import (a fully
+qualified name and inferred types). An import ban would miss both. Vert.x's
+core API is not banned: where needed, for example where Quarkus REST needs it,
+it is called from a virtual thread and awaited.
 
-Reason, from the measurements of the spike (Quarkus 3.40.1, JDK 25, 24 cores
-shared with the load client, so the server's ceilings were not reached):
+Reason, from the measurements of
+[the spike](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321)
+(Quarkus 3.40.1, JDK 25, 24 cores shared with the load client, so the
+server's ceilings were not reached):
 
 - With 300 concurrent 1 GiB readers, virtual threads gave a time to first byte
   at p99 of 203 ms with 68 platform threads. On Quarkus worker threads the pool
@@ -326,7 +355,7 @@ Rejected:
 - **Quarkus worker threads,** for the pool cap above.
 
 Consequences: a test failing on `jdk.VirtualThreadPinned` after a warm-up
-window is possible, though it does not detect a virtual thread hogging a
+window is possible (#34), though it does not detect a virtual thread hogging a
 carrier with CPU work. Reopen if the scale target becomes thousands of
 concurrent connections, or if a needed Quarkus extension exists only in a
 reactive form.
@@ -339,9 +368,10 @@ reactive form.
 Context: a client that reads a growing file receives bytes before the digest is
 known, but no client may end up with a complete unverified file. Verifying
 first gives the first client of a multi-GB layer nothing until the whole
-download is done, and may trip client idle timeouts. The spike measured the
-first byte of a 1 GiB fill at 6 to 68 ms with hold-back and 10.3 to 11.8 s
-verifying first.
+download is done, and may trip client idle timeouts.
+[The spike](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321)
+measured the first byte of a 1 GiB fill at 6 to 68 ms with hold-back and 10.3 to
+11.8 s verifying first.
 
 Decision:
 
@@ -383,8 +413,9 @@ concurrent misses of one 1 GiB artifact caused one upstream GET with all 200
 bodies matching; a disconnecting trigger client does not stop the fill; slow
 readers do not slow the others; corrupt and truncated upstreams aborted every
 connection, published nothing and left no temp files. Not covered by the
-spike: Maven's resume with Range, crash safety, and descriptor or thread leaks
-after disconnect storms.
+spike: Maven's resume with Range, crash safety, descriptor or thread leaks
+after disconnect storms, and the verify-first path for an upstream without a
+length (the spike answered 502 there).
 
 ## ADR-12: Serving cache hits, project Range code, no PathPart over HTTP/2, TLS at a reverse proxy
 
@@ -396,7 +427,7 @@ never returns 416 (an unsatisfiable range gets 200 with the full body), sends
 no `Accept-Ranges`, and answers HEAD with 200 and no headers at all, not even
 `Content-Length`
 ([issue #5](https://github.com/Carpenter-Softworks/Nucleus/issues/5#issuecomment-6390488275)).
-Throughput of a cached 1 GiB file on a single stream, from the spike:
+Throughput of a cached 1 GiB file on a single stream, from [the spike](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321):
 
 | Path | Throughput |
 | --- | --- |
@@ -410,21 +441,23 @@ Decision:
 - Range, 416 and HEAD are project code. A `PathPart` entity with that code was
   correct in all 28 rows of the spike's matrix, on HTTP/1.1 and HTTP/2.
 - `PathPart` is not used over HTTP/2: it is about 54 times slower than TLS on
-  HTTP/1.1 on a single stream.
+  HTTP/1.1 on a single stream. A plain read/write pump, 369 MiB/s in the
+  spike, is the measured alternative, not a decision.
 - Zero-copy sending happens only on cleartext HTTP/1.1. The baseline deployment
   therefore terminates TLS at a reverse proxy in front of nucleus, which talks
   cleartext HTTP/1.1 to it
   ([issue #22](https://github.com/Carpenter-Softworks/Nucleus/issues/22#issuecomment-6390488446)).
   That proxy is configured as trusted ([ADR-6](#adr-6-configuration-as-a-read-only-file-postgresql-for-the-cache-index)).
-  If nucleus terminates TLS itself, cache hits over HTTP/2 use a plain pump, not
-  `PathPart`.
 
 Rejected: relying on the plain `Path` entity, for the gaps above.
 
 Consequences: the zero-copy finding was read from the Vert.x source, not
-observed (strace was unavailable), so it is an inference. Not yet covered and
-defined elsewhere: Range on a miss (the spike answered 200 with the full body),
-and Maven's resume with Range. Every response carries `Content-Length`
+observed (strace was unavailable), so it is an inference. Not yet defined, to
+be defined in #5: Range on a miss (the spike answered 200 with the full body),
+and Maven's resume with Range. Nucleus's cleartext HTTP/1.1 listener must be
+reachable only from the TLS proxy (bound to loopback or an internal network);
+trusting the proxy's forwarded headers is not enough on its own. Every
+response carries `Content-Length`
 ([ADR-11](#adr-11-the-fill-mechanism-hold-back-and-abort-with-a-length-on-every-response)).
 Reusing one direct buffer per response cut server CPU by 21% against heap
 buffers.
@@ -445,12 +478,16 @@ What the number measures: that the project's own decision points, the bytecode
 branches and lines of its own code, were executed by a test. It does not
 measure:
 
-- exception paths in general: JaCoCo does not count them as branches, so a
-  `catch` or an implicit exception can be untested at 100%;
+- exception paths in general: the lines of a `catch` body must run, but which
+  throw site reaches a handler is not measured, and neither are exceptions that
+  propagate with no handler;
 - behaviour inside libraries: a retry, timeout or fallback implemented by a
   library is invisible, and so is, for example, whether Vert.x closes a
   connection before or after it writes a terminating chunk;
 - concurrency: interleavings are not branches.
+
+The check skips a module with no execution data, that is, no tests (today
+`core`), so each module with production classes needs a test.
 
 Consequences: failure and concurrency behaviour needs behavioural tests that
 assert outcomes, not coverage. At least:
@@ -461,11 +498,12 @@ assert outcomes, not coverage. At least:
   disconnecting trigger client does not stop the fill;
 - corrupt and truncated upstreams publish nothing and leave no temp files;
 - crash recovery and descriptor or thread leaks after disconnect storms, which
-  the spike did not cover;
+  [the spike](https://github.com/Carpenter-Softworks/Nucleus/issues/1#issuecomment-6390447321)
+  did not cover;
 - the threading fence itself, proven by a deliberate violation
   ([ADR-10](#adr-10-the-threading-model-blocking-code-on-virtual-threads)).
 
-Mutation testing checks that the tests assert something. PIT 1.30.1 worked on
-Java 25 in the spike, including with `@QuarkusTest`; its scores there were
-`core` 77% mutations killed (85% test strength) and one `app` test class 39%
-(62%). The scores are not a gate yet.
+Mutation testing (#30) checks that the tests assert something. PIT 1.30.1
+worked on Java 25 in the spike, including with `@QuarkusTest`; its scores there
+were `core` 77% mutations killed (85% test strength) and one `app` test class
+39% (62%). The scores are not a gate yet.

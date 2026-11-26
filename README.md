@@ -7,7 +7,7 @@ usage caps of a vendor's free tier.
 
 Pull-through only: everything nucleus stores can be fetched again from its
 upstream, and hosting your own packages is out of scope
-([ADR-5](docs/decisions.md)).
+([ADR-5](docs/decisions.md#adr-5-pull-through-only)).
 
 ## Status
 
@@ -23,9 +23,14 @@ make lint    # repository gates, then the Java quality gates
 make test    # unit tests, with 100% line and branch coverage enforced
 ```
 
-The gates come from [devkit](https://github.com/gregor-dietrich/devkit),
-pinned in `devkit.toml`. You need JDK 25, git 2.36 or later, GNU make,
-`ssh-keygen` (OpenSSH 8.1 or later), bash, python3 3.11 or later, and node
+On a fresh clone, run any `make` target (for example `make check`) once before
+importing the project into an IDE: devkit's parent POM resolves from `.devkit`,
+which `devkitw` creates. A "Non-resolvable parent POM" error means it has not
+run. Run `make hooks` once per clone.
+
+The gates come from devkit, pinned in `devkit.toml`. You need JDK 25, git 2.36
+or later, GNU make, `ssh-keygen` (OpenSSH 8.1 or later), bash, python3 3.11 or
+later, and node
 22.22.2 or later with npm (the Markdown gate). The first run also needs curl,
 tar and `sha256sum` or `shasum`, to fetch and verify the pinned tools. See
 devkit's README for the full list.
