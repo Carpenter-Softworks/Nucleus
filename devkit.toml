@@ -1,0 +1,6 @@
+# devkitw falls back to the mirror when the url is unreachable (CI).
+[devkit]
+url = "ssh://git@git.vptr.de:222/gregor/devkit.git"
+mirror = "https://github.com/gregor-dietrich/devkit.git"
+version = "v0.8.0"
+commit = "3fc9ed03eebdde6ceb696fd9e5c3ea286281868d"
