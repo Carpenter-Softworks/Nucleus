@@ -1,0 +1,8 @@
+# Proposes bumps for the SHA-pinned actions in .github/workflows, keeping the pin and its tag
+# comment. Maven is left out: Dependabot cannot resolve devkit's parent, which only .devkit holds.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

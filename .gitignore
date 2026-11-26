@@ -46,6 +46,7 @@ bin/
 
 # Local environment
 .env
+/.env.build
 .claude/settings.local.json
 
 # devkit link (devkitw)

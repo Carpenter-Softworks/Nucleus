@@ -34,11 +34,7 @@
     <!-- Project Settings -->
     <jacoco.check.lineMinimum>1.00</jacoco.check.lineMinimum>
     <jacoco.check.branchMinimum>1.00</jacoco.check.branchMinimum>
-    <nullaway.annotated.packages>de.vptr.nucleus</nullaway.annotated.packages>
-    <java.version>25</java.version>
-    <maven.compiler.release>${java.version}</maven.compiler.release>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <maven.compiler.release>25</maven.compiler.release>
 
     <!-- Quarkus Platform. Tracks the latest LTS line, NOT the latest stable release: LTS
     lines receive patch releases for far longer, which is what a project that ships releases

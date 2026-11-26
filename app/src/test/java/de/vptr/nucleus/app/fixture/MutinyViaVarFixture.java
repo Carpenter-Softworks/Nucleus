@@ -2,7 +2,7 @@ package de.vptr.nucleus.app.fixture;
 
 /**
  * Deliberate violation of the threading-model fence, never scanned as production code. It reaches Mutiny with no
- * import: a fully qualified name, and a type only {@code var} infers.
+ * import: {@code Uni} by its fully qualified name, the other Mutiny types only through inference.
  */
 public final class MutinyViaVarFixture {
 

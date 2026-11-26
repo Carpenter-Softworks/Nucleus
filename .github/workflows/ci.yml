@@ -12,8 +12,10 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  gates:
     runs-on: ubuntu-latest
+    # A run takes about a minute; devkitw documents that a stalled git server is not bounded.
+    timeout-minutes: 20
     steps:
       # No later step pushes, so the token stays away from the build code.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,13 +40,15 @@ jobs:
           restore-keys: ${{ runner.os }}-m2-
       # devkit.toml's url is on a private network; devkitw falls back to its GitHub mirror.
       # -k runs every repository gate and reports each failure; the later steps still run after a
-      # failed gate (the job stays red), so one push shows every problem.
+      # failed gate (the job stays red), so one push shows every problem. They do not run after a
+      # failed setup step, which leaves this step skipped.
       - name: Repository gates (devkitw, pins, decisions, secrets, Markdown)
+        id: repo
         run: make -k lint-repo
       # -o skips make lint's lint-repo prerequisite, which the step above ran.
       - name: Java quality gates
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.repo.outcome != 'skipped' }}
         run: make -o lint-repo lint
       - name: Run tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.repo.outcome != 'skipped' }}
         run: make test
