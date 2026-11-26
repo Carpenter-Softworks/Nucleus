@@ -6,7 +6,7 @@ name: Dependency graph
 
 on:
   push:
-    branches: [main, ci/dependency-graph]
+    branches: [main]
 
 permissions:
   contents: read
