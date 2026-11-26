@@ -1,0 +1,57 @@
+# GitHub Actions workflow for CI: repository gates, Java lint gates and tests.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    # A run takes about a minute; devkitw documents that a stalled git server is not bounded.
+    timeout-minutes: 20
+    steps:
+      # No later step pushes, so the token stays away from the build code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # lint-secrets scans the full history; a shallow clone fails it
+      # devkit's Markdown gate needs node on PATH.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22" # the newest 22.x, at or above devkit's 22.22.2 floor
+          check-latest: true # not an older 22.x the runner has cached
+      - name: Set up JDK 25
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: "temurin"
+          java-version: "25"
+      - name: Cache Maven packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2-
+      # devkit.toml's url is on a private network; devkitw falls back to its GitHub mirror. A step
+      # of its own, so a failed fetch skips the gates below instead of failing each of them.
+      - name: Fetch devkit
+        run: ./devkitw path
+      # -k runs every repository gate and reports each failure; the later steps still run after a
+      # failed gate (the job stays red), so one push shows every problem. They do not run after a
+      # failed setup step, which leaves this step skipped.
+      - name: Repository gates (devkitw, pins, decisions, secrets, Markdown)
+        id: repo
+        run: make -k lint-repo
+      # -o skips make lint's lint-repo prerequisite, which the step above ran.
+      - name: Java quality gates
+        if: ${{ !cancelled() && steps.repo.outcome != 'skipped' }}
+        run: make -o lint-repo lint
+      - name: Run tests
+        if: ${{ !cancelled() && steps.repo.outcome != 'skipped' }}
+        run: make test

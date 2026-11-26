@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>de.vptr</groupId>
+    <artifactId>nucleus-parent</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>nucleus-core</artifactId>
+  <name>nucleus core</name>
+  <description>Framework-free domain and cache logic. Declares no Quarkus or Vert.x dependency, so the module graph keeps them out.</description>
+</project>

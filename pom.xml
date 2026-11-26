@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>de.vptr.devkit</groupId>
+    <artifactId>devkit-parent</artifactId>
+    <version>0.8.0</version>
+    <relativePath>.devkit/java/parent/pom.xml</relativePath>
+  </parent>
+
+  <groupId>de.vptr</groupId>
+  <artifactId>nucleus-parent</artifactId>
+  <version>${revision}</version>
+  <packaging>pom</packaging>
+
+  <name>nucleus</name>
+  <description>A self-hosted pull-through artifact cache.</description>
+
+  <licenses>
+    <license>
+      <name>AGPL-3.0-or-later</name>
+      <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <properties>
+    <!-- Placeholder to override with -Drevision= -->
+    <revision>1.0.0-SNAPSHOT</revision>
+
+    <!-- Project Settings -->
+    <jacoco.check.lineMinimum>1.00</jacoco.check.lineMinimum>
+    <jacoco.check.branchMinimum>1.00</jacoco.check.branchMinimum>
+    <maven.compiler.release>25</maven.compiler.release>
+
+    <!-- Quarkus Platform. Tracks the latest LTS line, NOT the latest stable release: LTS
+    lines receive patch releases for far longer, which is what a project that ships releases
+    needs. 3.40.x is the current LTS, so newer stable releases are deliberately not adopted;
+    `make check` reporting one as "outdated" is expected and informational. Move to a new
+    LTS line only. -->
+    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+    <quarkus.platform.version>3.40.1.1</quarkus.platform.version>
+
+    <!-- Other Dependencies & Plugins -->
+    <archunit.version>1.5.1</archunit.version>
+  </properties>
+
+  <modules>
+    <module>core</module>
+    <module>app</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Quarkus; also manages JUnit and Mutiny -->
+      <dependency>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <!-- One checkstyle-suppressions.xml at the root for every module, instead of the
+             parent's one per module. Both executions, checkstyle and project, inherit it. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <configuration>
+            <propertyExpansion>
+              org.checkstyle.google.suppressionfilter.config=${maven.multiModuleProjectDirectory}/checkstyle-suppressions.xml</propertyExpansion>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
