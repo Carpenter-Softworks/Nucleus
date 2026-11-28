@@ -66,8 +66,8 @@ runs under `make test`: integration tests alone do not count.
 - devkit is pinned in `devkit.toml`. Never edit `devkitw`; a bump copies the
   new one in (`make lint` verifies it). The GitHub mirror (`mirror` in
   `devkit.toml`) must carry the new signed tag before CI can fetch it. A bump
-  also checks that devkit's Quarkus stays on an LTS line (ADR-1) and that
-  `junit.version` in the root pom matches the JUnit the Quarkus BOM manages.
+  also checks that `junit.version` in the root pom matches the JUnit the
+  Quarkus BOM manages.
 - Work lands on `main` only through a branch and a pull request.
 - A fix for a failing gate fixes the cause. Do not suppress a finding without
   a recorded reason next to the suppression.

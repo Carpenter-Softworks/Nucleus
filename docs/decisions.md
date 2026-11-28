@@ -62,12 +62,8 @@ Rejected:
 Consequences: the Quarkus platform follows its latest LTS line, not the newest
 stable release. Its version is the one devkit's Quarkus parent pins (an LTS line
 as of devkit v0.10.0), so it moves with a devkit bump, and `make check`
-does not report it. A devkit bump that would leave the LTS line is held; a
-Quarkus fix devkit has not released yet goes in through devkit's unchecked
-`-Dquarkus.platform.version` hatch in `MAVEN_ARGS`, since a pom that defines the
-property fails devkit's parent check. A deployment needs a JVM. A single static
-binary for tiny hardware is not a goal; that need would reopen this decision
-toward Go.
+does not report it. A deployment needs a JVM. A single static binary for tiny
+hardware is not a goal; that need would reopen this decision toward Go.
 
 ## ADR-2: Build rather than adopt or stitch together existing tools
 
