@@ -20,7 +20,8 @@
   <description>A self-hosted pull-through artifact cache.</description>
 
   <!-- app inherits devkit's Quarkus parent, not this pom: it restates the licenses, the
-       properties and the Checkstyle configuration below, so a change here goes there too. -->
+       revision, coverage and compiler properties, the junit-jupiter test dependency and the
+       Checkstyle configuration below, so a change to those here goes there too. -->
   <licenses>
     <license>
       <name>AGPL-3.0-or-later</name>

@@ -5,8 +5,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <!-- devkit's Quarkus parent: the Quarkus platform version, BOM, plugin and test support. A
-       module on one of devkit's parents inherits nothing from the project root, so the root's
-       settings app needs are restated below. -->
+       module directly on one of devkit's parents inherits nothing from the project root, so
+       the root's settings app needs are restated below. -->
   <parent>
     <groupId>de.vptr.devkit</groupId>
     <artifactId>devkit-quarkus-parent</artifactId>

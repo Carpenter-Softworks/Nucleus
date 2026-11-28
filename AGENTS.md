@@ -40,7 +40,8 @@ REST needs it, called from a virtual thread and awaited (ADR-10).
 ## Gates
 
 - Run `make hooks` once per clone and after each devkit bump.
-- `make check`: verifies the toolchain (JDK 25 and the devkit pin).
+- `make check`: verifies the toolchain (JDK 25 and the devkit pin) and reports
+  outdated version pins.
 - `make lint`: repository gates (`devkitw`, pins, decisions log, secrets,
   Markdown), then the Java gates (Error Prone and NullAway, Spotless,
   Checkstyle, SpotBugs, and the rest of devkit's set).
@@ -56,15 +57,17 @@ behaviour inside a library is: failure and concurrency behaviour needs
 behavioural tests of its own. See the coverage entry in `docs/decisions.md`.
 
 devkit fails the build on a module that has classes but no execution data;
-`package-info` does not count, which is why `core` passes today. Every module
-with production classes needs at least one unit test that runs under
-`make test`: integration tests alone do not count.
+`package-info` and `module-info` do not count, which is why `core` passes
+today. Every module with production classes needs at least one unit test that
+runs under `make test`: integration tests alone do not count.
 
 ## Rules
 
 - devkit is pinned in `devkit.toml`. Never edit `devkitw`; a bump copies the
   new one in (`make lint` verifies it). The GitHub mirror (`mirror` in
-  `devkit.toml`) must carry the new signed tag before CI can fetch it.
+  `devkit.toml`) must carry the new signed tag before CI can fetch it. A bump
+  also checks that devkit's Quarkus stays on an LTS line (ADR-1) and that
+  `junit.version` in the root pom matches the JUnit the Quarkus BOM manages.
 - Work lands on `main` only through a branch and a pull request.
 - A fix for a failing gate fixes the cause. Do not suppress a finding without
   a recorded reason next to the suppression.
