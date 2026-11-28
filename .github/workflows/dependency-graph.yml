@@ -14,7 +14,7 @@ permissions:
 jobs:
   submit:
     runs-on: ubuntu-latest
-    # devkitw documents that a stalled git server is not bounded.
+    # devkitw bounds each git command where timeout(1) is found, not the job or what git starts.
     timeout-minutes: 20
     # The snapshot API needs contents: write, and the action generates and submits in one
     # process, so this token sits beside the unverified dependency closure and build

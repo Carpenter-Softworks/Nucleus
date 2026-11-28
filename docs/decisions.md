@@ -12,7 +12,7 @@ posted as a
 ## ADR-1: Java 25 on the JVM with Quarkus
 
 **Status:** Accepted
-**Date:** 2026-10-24
+**Date:** 2026-10-24 (Quarkus from devkit's Quarkus parent: 2026-11-28)
 
 Context: the product is a long-running single-node streaming proxy. It moves
 multi-GB blobs, answers Range and HEAD requests, and parses untrusted XML, JSON
@@ -25,11 +25,12 @@ language is only as good as the gates that exist for it.
 Decision: Java 25 on the JVM, with Quarkus for HTTP, security and database
 access. devkit's Java gates (Error Prone with NullAway, SpotBugs, PMD,
 Checkstyle, JaCoCo branch coverage, a license allowlist, plugin checksums)
-already exist and apply as they are, with one limit: the checksums cover
-devkit's own gate tooling at its pinned versions, not the project's dependency
-graph, and a build extension the project adds (`quarkus-maven-plugin` with
-`<extensions>true</extensions>`) runs in Maven's JVM unverified and could
-defeat even that
+already exist and apply as they are, with one limit: the checksums cover only
+the artifacts devkit lists at its pinned versions, its own gate tooling and what
+its Quarkus parent brings (the Quarkus BOM and `quarkus-maven-plugin` among
+them), not the rest of the project's dependency graph. The deployment modules
+of a Quarkus extension devkit does not list (today `quarkus-rest`'s) run in
+Maven's JVM during the Quarkus build unverified and could defeat even that
 ([ADR-14](#adr-14-dependency-closure-not-checksum-verified-an-accepted-risk)).
 Virtual threads let straightforward blocking code scale
 ([ADR-10](#adr-10-the-threading-model-blocking-code-on-virtual-threads)).
@@ -59,9 +60,14 @@ Rejected:
   native build needs its own test pass. It can be revisited later.
 
 Consequences: the Quarkus platform follows its latest LTS line, not the newest
-stable release, so `make check` reporting a newer release as outdated is
-expected. A deployment needs a JVM. A single static binary for tiny hardware is
-not a goal; that need would reopen this decision toward Go.
+stable release. Its version is the one devkit's Quarkus parent pins (an LTS line
+as of devkit v0.10.0), so it moves only with a devkit bump, and `make check`
+does not report it. A devkit bump that would leave the LTS line is held; a
+Quarkus fix devkit has not released yet goes in through devkit's unchecked
+`-Dquarkus.platform.version` hatch in `MAVEN_ARGS`, since a pom that defines the
+property fails devkit's parent check. A deployment needs a JVM. A single static
+binary for tiny hardware is not a goal; that need would reopen this decision
+toward Go.
 
 ## ADR-2: Build rather than adopt or stitch together existing tools
 
@@ -460,8 +466,9 @@ Context: with LLM-assisted development a test can reach every branch without
 checking anything useful, and a coverage number can read as more assurance than
 it gives.
 
-Decision: JaCoCo minimums are 100% line and 100% branch, set in the root POM,
-above devkit's defaults of 90% and 80%.
+Decision: JaCoCo minimums are 100% line and 100% branch, set in the root POM
+and restated in `app`'s, which inherits devkit's Quarkus parent instead, above
+devkit's defaults of 90% and 80%.
 
 What the number measures: that the project's own decision points, the bytecode
 branches and lines of its own code, were executed by a test. It does not
@@ -475,9 +482,10 @@ measure:
   connection before or after it writes a terminating chunk;
 - concurrency: interleavings are not branches.
 
-devkit fails the build on a module with classes but no execution data, that
-is, no tests (`package-info` does not count), so each module with production
-classes needs a test.
+devkit fails the build on a module with classes but no execution data
+(`package-info` and `module-info` do not count), so each module with production
+classes needs a unit test that runs under `make test`: integration tests alone
+do not count.
 
 Consequences: failure and concurrency behaviour needs behavioural tests that
 assert outcomes, not coverage. At least:
@@ -501,16 +509,18 @@ were `core` 77% mutations killed (85% test strength) and one `app` test class
 ## ADR-14: Dependency closure not checksum-verified, an accepted risk
 
 **Status:** Accepted
-**Date:** 2026-11-26
+**Date:** 2026-11-26 (the Quarkus parent's artifacts: 2026-11-28)
 
-Context: devkit's plugin checksums cover its own gate tooling at its pinned
-versions, not the project's dependency graph, and `quarkus-maven-plugin` runs
-as a build extension in Maven's JVM without verification
+Context: devkit's plugin checksums cover only the artifacts devkit lists at its
+pinned versions: its own gate tooling and what its Quarkus parent brings,
+`quarkus-maven-plugin` and the Quarkus BOM among them. The deployment modules of
+an extension devkit does not list (today `quarkus-rest`'s) run in Maven's JVM
+during the Quarkus build without verification
 ([ADR-1](#adr-1-java-25-on-the-jvm-with-quarkus)).
 
 Decision: the dependency closure and build extensions are pinned by version
-(the Quarkus BOM) but not checksum-verified. TLS to Maven Central is the
-protection.
+(the Quarkus BOM) but checksum-verified only where devkit lists them, and only
+under the `make` targets. TLS to Maven Central is the protection for the rest.
 
 Reason: no nucleus artifact is released yet, and verifying the full closure,
 for example with project-level trusted checksums, costs upkeep on every

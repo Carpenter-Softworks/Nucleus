@@ -19,6 +19,8 @@
   <name>nucleus</name>
   <description>A self-hosted pull-through artifact cache.</description>
 
+  <!-- app inherits devkit's Quarkus parent, not this pom: it restates the licenses, the
+       properties and the Checkstyle configuration below, so a change here goes there too. -->
   <licenses>
     <license>
       <name>AGPL-3.0-or-later</name>
@@ -47,7 +49,8 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- For core; app takes JUnit from the Quarkus BOM, which manages this same version -->
+      <!-- For core. app takes JUnit from the Quarkus BOM: keep junit.version at the JUnit that
+           BOM manages, and re-check it on every devkit bump. -->
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
@@ -70,7 +73,8 @@
     <pluginManagement>
       <plugins>
         <!-- One checkstyle-suppressions.xml at the root for every module, instead of the
-             parent's one per module. Both executions, checkstyle and project, inherit it. -->
+             parent's one per module. Both executions, checkstyle and project, inherit it;
+             app restates it. -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>

@@ -19,9 +19,10 @@ the section layout.
 - `app` (`nucleus-app`): the Quarkus application. It depends on `core`.
 - Coordinates: groupId `de.vptr`; Java packages under `de.vptr.nucleus`.
 - Parents: a Quarkus module (`app`) inherits devkit's `devkit-quarkus-parent`
-  and restates the root's settings, since it inherits nothing from the root;
-  the root and every other module inherit `devkit-parent`. The Quarkus
-  version is the Quarkus parent's and moves only with a devkit bump.
+  and restates the root's settings, since it inherits nothing from the root.
+  The root inherits `devkit-parent`, and every other module inherits the root.
+  The Quarkus version is the Quarkus parent's and moves with a devkit bump
+  (ADR-1).
 
 ## Threading model
 
@@ -54,9 +55,10 @@ exercised. It does not mean exception paths in general are tested, nor that
 behaviour inside a library is: failure and concurrency behaviour needs
 behavioural tests of its own. See the coverage entry in `docs/decisions.md`.
 
-devkit fails the build on a module that has classes but no execution data,
-that is, no tests; `package-info` does not count, which is why `core` passes
-today. Every module with production classes needs at least one test.
+devkit fails the build on a module that has classes but no execution data;
+`package-info` does not count, which is why `core` passes today. Every module
+with production classes needs at least one unit test that runs under
+`make test`: integration tests alone do not count.
 
 ## Rules
 
