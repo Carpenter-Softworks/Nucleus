@@ -475,8 +475,9 @@ measure:
   connection before or after it writes a terminating chunk;
 - concurrency: interleavings are not branches.
 
-The check skips a module with no execution data, that is, no tests (today
-`core`), so each module with production classes needs a test.
+devkit fails the build on a module with classes but no execution data, that
+is, no tests (`package-info` does not count), so each module with production
+classes needs a test.
 
 Consequences: failure and concurrency behaviour needs behavioural tests that
 assert outcomes, not coverage. At least:
