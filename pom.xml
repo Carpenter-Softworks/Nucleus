@@ -7,7 +7,7 @@
   <parent>
     <groupId>de.vptr.devkit</groupId>
     <artifactId>devkit-parent</artifactId>
-    <version>0.8.0</version>
+    <version>0.10.0</version>
     <relativePath>.devkit/java/parent/pom.xml</relativePath>
   </parent>
 
@@ -19,6 +19,9 @@
   <name>nucleus</name>
   <description>A self-hosted pull-through artifact cache.</description>
 
+  <!-- app inherits devkit's Quarkus parent, not this pom: it restates the licenses, the
+       revision, coverage and compiler properties, the junit-jupiter test dependency and the
+       Checkstyle configuration below, so a change to those here goes there too. -->
   <licenses>
     <license>
       <name>AGPL-3.0-or-later</name>
@@ -36,17 +39,8 @@
     <jacoco.check.branchMinimum>1.00</jacoco.check.branchMinimum>
     <maven.compiler.release>25</maven.compiler.release>
 
-    <!-- Quarkus Platform. Tracks the latest LTS line, NOT the latest stable release: LTS
-    lines receive patch releases for far longer, which is what a project that ships releases
-    needs. 3.40.x is the current LTS, so newer stable releases are deliberately not adopted;
-    `make check` reporting one as "outdated" is expected and informational. Move to a new
-    LTS line only. -->
-    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-    <quarkus.platform.version>3.40.1.1</quarkus.platform.version>
-
     <!-- Other Dependencies & Plugins -->
-    <archunit.version>1.5.1</archunit.version>
+    <junit.version>6.1.3</junit.version>
   </properties>
 
   <modules>
@@ -56,11 +50,12 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- Quarkus; also manages JUnit and Mutiny -->
+      <!-- For core. app takes JUnit from the Quarkus BOM: keep junit.version at the JUnit that
+           BOM manages, and re-check it on every devkit bump. -->
       <dependency>
-        <groupId>${quarkus.platform.group-id}</groupId>
-        <artifactId>${quarkus.platform.artifact-id}</artifactId>
-        <version>${quarkus.platform.version}</version>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -79,7 +74,8 @@
     <pluginManagement>
       <plugins>
         <!-- One checkstyle-suppressions.xml at the root for every module, instead of the
-             parent's one per module. Both executions, checkstyle and project, inherit it. -->
+             parent's one per module. Both executions, checkstyle and project, inherit it;
+             app restates it. -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>

@@ -14,7 +14,9 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
-    # A run takes about a minute; devkitw documents that a stalled git server is not bounded.
+    # A run takes about a minute. devkitw bounds each git command where timeout(1) is found,
+    # not the job or what git starts.
+    # DEVKIT_MAVEN_MIRROR stays unset on purpose: devkit's default mirror list applies.
     timeout-minutes: 20
     steps:
       # No later step pushes, so the token stays away from the build code.

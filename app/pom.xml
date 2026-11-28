@@ -4,16 +4,44 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- devkit's Quarkus parent: the Quarkus platform version, BOM, plugin and test support. A
+       module directly on one of devkit's parents inherits nothing from the project root, so
+       the root's settings app needs are restated below. -->
   <parent>
-    <groupId>de.vptr</groupId>
-    <artifactId>nucleus-parent</artifactId>
-    <version>${revision}</version>
+    <groupId>de.vptr.devkit</groupId>
+    <artifactId>devkit-quarkus-parent</artifactId>
+    <version>0.10.0</version>
+    <relativePath>../.devkit/java/quarkus/pom.xml</relativePath>
   </parent>
 
+  <groupId>de.vptr</groupId>
   <artifactId>nucleus-app</artifactId>
+  <version>${revision}</version>
   <packaging>quarkus</packaging>
+
   <name>nucleus app</name>
   <description>The Quarkus application: HTTP endpoints and wiring around nucleus-core.</description>
+
+  <licenses>
+    <license>
+      <name>AGPL-3.0-or-later</name>
+      <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <properties>
+    <!-- Placeholder to override with -Drevision= -->
+    <revision>1.0.0-SNAPSHOT</revision>
+
+    <!-- Project Settings -->
+    <jacoco.check.lineMinimum>1.00</jacoco.check.lineMinimum>
+    <jacoco.check.branchMinimum>1.00</jacoco.check.branchMinimum>
+    <maven.compiler.release>25</maven.compiler.release>
+
+    <!-- Other Dependencies & Plugins -->
+    <archunit.version>1.5.1</archunit.version>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -25,7 +53,11 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-rest</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- Threading-model fence (ThreadingModelTest). Its fixture's Mutiny comes through
          quarkus-rest: declaring mutiny here at test scope would demote it off the runtime
          classpath. -->
@@ -38,13 +70,18 @@
   </dependencies>
 
   <build>
-    <plugins>
-      <plugin>
-        <groupId>${quarkus.platform.group-id}</groupId>
-        <artifactId>quarkus-maven-plugin</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <extensions>true</extensions>
-      </plugin>
-    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!-- The root's checkstyle-suppressions.xml, as for every module. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <configuration>
+            <propertyExpansion>
+              org.checkstyle.google.suppressionfilter.config=${maven.multiModuleProjectDirectory}/checkstyle-suppressions.xml</propertyExpansion>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 </project>

@@ -20,7 +20,7 @@ the decision record exist, and nothing runs yet.
 make help    # every target
 make check   # verify the toolchain
 make lint    # repository gates, then the Java quality gates
-make test    # unit tests, 100% line and branch coverage in every module with tests
+make test    # unit tests, 100% line and branch coverage in every module
 ```
 
 On a fresh clone, run any `make` target (for example `make check`) once before
